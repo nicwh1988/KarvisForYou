@@ -1,6 +1,6 @@
 GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/KarvisForYou) | 官网：[karvis.top](https://karvis.top)
 
-![[Pasted image 20260310141909.png]]
+![](images/Pasted%20image%2020260310141909.png)
 
 
 **💡 太长不看版：**
@@ -42,7 +42,7 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 说实话，它很强大，**不是我想要的**。
 
-龙虾的定位是 **OS 级别的 Agent（智能体）**，它接管你的键盘鼠标，适合帮你自动处理电脑上的复杂系统任务。但我需要的不是一个帮我干活的“赛博黑工”，而是一个 **随叫随到的个人管家**。
+龙虾的定位是 **OS 级别的 Agent（智能体）**，它接管你的键盘鼠标，适合帮你自动处理电脑上的复杂系统任务。但我需要的不是一个帮我干活的"赛博黑工"，而是一个 **随叫随到的个人管家**。
 
 - **部署成本太高**：需要一台常驻的 Mac Mini 或高配云服务器，还要折腾各种环境。
 
@@ -83,8 +83,8 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 是我用 CodeBuddy **5 分钟搭起来的**：
 
-![[Pasted image 20260310142015.png]]
-![[Pasted image 20260310142022.png]]
+![](images/Pasted%20image%2020260310142015.png)
+![](images/Pasted%20image%2020260310142022.png)
 
 
 仅仅是告诉codebuddy：
@@ -118,13 +118,13 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 不用打开任何 App。在微信里随便说一句，Karvis 自动帮你分类、归档、写进 Obsidian 知识库。回到家打开电脑，笔记已经躺好了。
 
-![[Pasted image 20260310142038.png]]
+![](images/Pasted%20image%2020260310142038.png)
 ### ✅ 待办管理
 
 
 "帮我加个待办：明天下午三点开会"——就这么简单。查看待办、批量完成、添加提醒，全都在聊天里搞定。
 
-![[Pasted image 20260310142052.png]]
+![](images/Pasted%20image%2020260310142052.png)
 
 
 ### 🌅 自动总结
@@ -132,31 +132,31 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 早上 8 点晨报叫你起床，告诉你今天该干嘛、天气怎样、昨天的亮点是什么。晚上自动生成日报、情绪日记。你什么都不用做。
 
-![[Pasted image 20260310142106.png]]
+![](images/Pasted%20image%2020260310142106.png)
 
 ### 🧠 三层记忆
 
 
 工作记忆处理当前对话，长期记忆沉淀你的偏好和经历，知识库存储你的笔记和文章。它不是每次重新认识你，而是一直记着你。
-![[Pasted image 20260310142119.png]]
+![](images/Pasted%20image%2020260310142119.png)
 
 "那个公众号链接叫什么来着？"——你说过的每句话，它都记得。比翻聊天记录快 100 倍。
 
-![[Pasted image 20260310142128.png]]
+![](images/Pasted%20image%2020260310142128.png)
 
 ### 💬 有温度的陪伴
 
 
 它不只是冷冰冰地记录。你说胃疼，它会关心你，还主动帮你加一个明天去看医生的提醒。你加班到很晚，它会心疼。
 
-![[Pasted image 20260310142139.png]]
+![](images/Pasted%20image%2020260310142139.png)
 
 
 ----
 
 ## 五、技术架构：三层调度，按需启动
 
-![[Pasted image 20260310142150.png]]
+![](images/Pasted%20image%2020260310142150.png)
 
 |层级|组件|说明|
 |:-:|:-:|:-:|
@@ -193,9 +193,9 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 **那如果这个电脑配的是一个 AI 呢？**
 
-这自然让我联想到了我们团队的业务——游戏知几。我们的 slogan 是「懂游戏更懂你」。做 Karvis 的过程，让我无比具象地体验到了什么叫**“一个真正懂你的 AI 助手”**。它不是冷冰冰的问答机器，而是有记忆、有温度、能主动关怀的伙伴。
+这自然让我联想到了我们团队的业务——游戏知几。我们的 slogan 是「懂游戏更懂你」。做 Karvis 的过程，让我无比具象地体验到了什么叫**"一个真正懂你的 AI 助手"**。它不是冷冰冰的问答机器，而是有记忆、有温度、能主动关怀的伙伴。
 
-如果“知几”也能成为每个玩家专属的“微信级”游戏 AI 助手：
+如果"知几"也能成为每个玩家专属的"微信级"游戏 AI 助手：
 
 
 - 它不仅能解答攻略，还能**记住**你喜欢玩打野位置，记住你讨厌排队。
