@@ -149,7 +149,7 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 它不只是冷冰冰地记录。你说胃疼，它会关心你，还主动帮你加一个明天去看医生的提醒。你加班到很晚，它会心疼。
 
-![](images/Pasted%20image%2020260310142139.png)
+<img src="images/Pasted%20image%2020260310142139.png" width="700">
 
 
 ----
