@@ -83,8 +83,8 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 是我用 CodeBuddy **5 分钟搭起来的**：
 
-![](images/Pasted%20image%2020260310142015.png)
-![](images/Pasted%20image%2020260310142022.png)
+<img src="images/Pasted%20image%2020260310142015.png" width="700">
+<img src="images/Pasted%20image%2020260310142022.png" width="700">
 
 
 仅仅是告诉codebuddy：
@@ -118,13 +118,13 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 不用打开任何 App。在微信里随便说一句，Karvis 自动帮你分类、归档、写进 Obsidian 知识库。回到家打开电脑，笔记已经躺好了。
 
-![](images/Pasted%20image%2020260310142038.png)
+<img src="images/Pasted%20image%2020260310142038.png" width="360">
 ### ✅ 待办管理
 
 
 "帮我加个待办：明天下午三点开会"——就这么简单。查看待办、批量完成、添加提醒，全都在聊天里搞定。
 
-![](images/Pasted%20image%2020260310142052.png)
+<img src="images/Pasted%20image%2020260310142052.png" width="360">
 
 
 ### 🌅 自动总结
@@ -132,17 +132,17 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 
 早上 8 点晨报叫你起床，告诉你今天该干嘛、天气怎样、昨天的亮点是什么。晚上自动生成日报、情绪日记。你什么都不用做。
 
-![](images/Pasted%20image%2020260310142106.png)
+<img src="images/Pasted%20image%2020260310142106.png" width="360">
 
 ### 🧠 三层记忆
 
 
 工作记忆处理当前对话，长期记忆沉淀你的偏好和经历，知识库存储你的笔记和文章。它不是每次重新认识你，而是一直记着你。
-![](images/Pasted%20image%2020260310142119.png)
+<img src="images/Pasted%20image%2020260310142119.png" width="360">
 
 "那个公众号链接叫什么来着？"——你说过的每句话，它都记得。比翻聊天记录快 100 倍。
 
-![](images/Pasted%20image%2020260310142128.png)
+<img src="images/Pasted%20image%2020260310142128.png" width="320">
 
 ### 💬 有温度的陪伴
 
