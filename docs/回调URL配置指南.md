@@ -1,6 +1,8 @@
 # 企微回调 URL 配置指南
 
 > 这是大家部署时遇到问题最多的一步。本文按照不同场景逐一说明，找到自己的情况照做就行。
+>
+> 遇到问题先看 [FAQ](FAQ.md#回调-url-相关)，有更多常见问题解答。
 
 ---
 
@@ -194,6 +196,11 @@ nohup python3 app.py > karvis.log 2>&1 &
 5. **用浏览器直接访问 URL 看看**
    把你要填的 URL 粘到浏览器地址栏，回车，如果能看到任何内容（哪怕是报错页），说明服务可达。如果浏览器超时/拒绝连接，说明访问不到，继续排查网络问题。
 
+### 报错："该域名被限制设置"
+
+1. **URL 格式不对**：必须是完整格式 `http://43.138.xx.xx:9000/wework`，不能只写 IP
+2. **企微限制**：部分企业类型可能有域名限制。尝试用 cloudflared 临时域名代替
+
 ### 报错："Token不匹配" / "签名校验失败"
 
 Token 或 AESKey 填错了。检查：
@@ -205,6 +212,12 @@ Token 或 AESKey 填错了。检查：
 ### 能保存，但发消息没有回复
 
 参考[连接验证排查](#发消息没有回复)。
+
+### 本地方案：cloudflared 启动不了（Windows / IOA 环境）
+
+1. **Windows 安装**：用 `winget install cloudflare.cloudflared` 或从 [官网下载](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
+2. **公司内网/IOA 拦截**：公司防火墙可能阻止隧道连接，换个网络试试，或直接用云服务器方案
+3. **Mac 安装失败**：确认用 `brew install cloudflared` 或 setup.sh 自动安装
 
 ---
 

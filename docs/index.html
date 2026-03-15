@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karvis 文档</title>
+  <meta name="description" content="KarvisForYou 部署与使用文档">
+  <link rel="icon" href="../assets/icon.png" type="image/png">
+  <!-- 与官网一致的字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- docsify 暗色主题 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple-dark.css">
+  <style>
+    /* ===== 与官网统一的设计令牌 ===== */
+    :root {
+      /* 基础色 — 完全对齐官网 index.html */
+      --base-background-color: #0a0a0a;
+      --sidebar-background: #111111;
+      --sidebar-border-color: #1e1e1e;
+      --sidebar-border-width: 1px;
+      --heading-color: #f5f5f5;
+      --base-color: #d4d4d4;
+      --base-font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --base-font-size: 15px;
+      --base-line-height: 1.8;
+
+      /* 强调色 — 官网蓝 */
+      --link-color: #3b82f6;
+      --link-color--hover: #60a5fa;
+      --sidebar-nav-link-color: #a3a3a3;
+      --sidebar-nav-link-color--hover: #f5f5f5;
+      --sidebar-nav-link-color--active: #3b82f6;
+      --sidebar-nav-link-border-color--active: #3b82f6;
+      --sidebar-nav-link-font-weight--active: 600;
+
+      /* 代码块 */
+      --code-theme-background: #111111;
+      --code-inline-background: #1e1e1e;
+      --code-inline-color: #e5e5e5;
+      --code-inline-border-radius: 4px;
+      --code-inline-padding: 2px 6px;
+      --code-font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      --code-font-size: 0.88em;
+
+      /* 其他 */
+      --blockquote-border-color: #3b82f6;
+      --blockquote-background: rgba(59, 130, 246, 0.05);
+      --table-row-even-background: #111111;
+      --cover-background-color: #0a0a0a;
+      --search-background: #111111;
+
+      /* 内容区 */
+      --content-max-width: 860px;
+
+      /* 通知条 */
+      --notice-tip-border-color: #3b82f6;
+      --notice-important-border-color: #f59e0b;
+    }
+
+    /* ===== 品牌顶栏 ===== */
+    body {
+      padding-top: 56px;
+    }
+
+    .karvis-topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 999;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      background: rgba(10, 10, 10, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid #1e1e1e;
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    }
+
+    .karvis-topbar .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #f5f5f5;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .karvis-topbar .brand img {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+    }
+
+    .karvis-topbar .brand .docs-badge {
+      color: #3b82f6;
+      font-weight: 600;
+      margin-left: 2px;
+    }
+
+    .karvis-topbar .topbar-nav {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .karvis-topbar .topbar-nav a {
+      color: #a3a3a3;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: color 0.2s;
+      letter-spacing: 0.01em;
+    }
+
+    .karvis-topbar .topbar-nav a:hover {
+      color: #f5f5f5;
+    }
+
+    .karvis-topbar .topbar-nav a.active {
+      color: #3b82f6;
+    }
+
+    .karvis-topbar .login-btn {
+      padding: 7px 18px !important;
+      background: #f5f5f5 !important;
+      color: #0a0a0a !important;
+      border-radius: 6px;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      transition: opacity 0.2s;
+    }
+
+    .karvis-topbar .login-btn:hover {
+      opacity: 0.88;
+      color: #0a0a0a !important;
+    }
+
+    /* 移动端顶栏 */
+    .topbar-menu-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: #f5f5f5;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .karvis-topbar .topbar-nav {
+        display: none;
+      }
+      .topbar-menu-btn {
+        display: block;
+      }
+      .karvis-topbar .topbar-nav.show {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 56px;
+        right: 0;
+        background: rgba(17, 17, 17, 0.98);
+        backdrop-filter: blur(20px);
+        border: 1px solid #1e1e1e;
+        border-radius: 0 0 8px 8px;
+        padding: 16px 24px;
+        gap: 16px;
+      }
+    }
+
+    /* ===== 侧边栏调整 ===== */
+    .sidebar {
+      padding-top: 16px !important;
+      border-right: 1px solid #1e1e1e !important;
+      top: 56px !important;
+      height: calc(100% - 56px) !important;
+    }
+
+    /* 隐藏 docsify 自带的标题（用顶栏替代） */
+    .sidebar .app-name-link,
+    .sidebar > h1:first-child {
+      display: none !important;
+    }
+
+    /* 侧边栏链接样式 */
+    .sidebar ul li a {
+      font-size: 14px;
+      padding: 6px 16px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .sidebar ul li a:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar ul li.active > a {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    /* 返回官网按钮 */
+    .back-home {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      margin: 0 16px 20px;
+      color: #737373;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      text-align: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .back-home:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.04);
+    }
+
+    /* ===== 主内容区 ===== */
+    .content {
+      top: 56px !important;
+      height: calc(100% - 56px) !important;
+    }
+
+    .markdown-section {
+      max-width: 860px;
+      padding: 32px 48px 64px;
+    }
+
+    .markdown-section h1 {
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      font-size: 2em;
+      margin-top: 0;
+    }
+
+    .markdown-section h2 {
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-top: 48px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    .markdown-section h3 {
+      font-weight: 600;
+      margin-top: 32px;
+    }
+
+    /* 表格美化 */
+    .markdown-section table {
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #1e1e1e;
+      width: 100%;
+    }
+
+    .markdown-section th {
+      background: #181818;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .markdown-section td, .markdown-section th {
+      border-color: #1e1e1e;
+      padding: 10px 16px;
+      font-size: 14px;
+    }
+
+    .markdown-section tr:hover td {
+      background: rgba(59, 130, 246, 0.03);
+    }
+
+    /* 引用块美化 */
+    .markdown-section blockquote {
+      border-left: 3px solid #3b82f6;
+      background: rgba(59, 130, 246, 0.04);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 20px;
+      margin: 20px 0;
+    }
+
+    /* 链接样式 */
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .markdown-section a:hover {
+      color: #60a5fa;
+      text-decoration: underline;
+    }
+
+    /* 行内代码 */
+    .markdown-section code {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      background: #1e1e1e;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      color: #e5e5e5;
+    }
+
+    /* 代码块 */
+    .markdown-section pre {
+      border-radius: 8px;
+      border: 1px solid #1e1e1e;
+    }
+
+    /* 搜索框美化 */
+    .search input {
+      background: #111111 !important;
+      border: 1px solid #1e1e1e !important;
+      border-radius: 8px !important;
+      color: #f5f5f5 !important;
+      font-family: 'Inter', 'Noto Sans SC', sans-serif !important;
+      font-size: 14px !important;
+      padding: 8px 14px !important;
+      transition: border-color 0.2s !important;
+    }
+
+    .search input:focus {
+      border-color: #3b82f6 !important;
+      outline: none !important;
+    }
+
+    .search input::placeholder {
+      color: #737373 !important;
+    }
+
+    .search .matching-post {
+      border-bottom-color: #1e1e1e !important;
+    }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #404040;
+    }
+
+    /* ===== GitHub Corner 隐藏（用顶栏替代） ===== */
+    .github-corner {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- 品牌顶栏 — 与官网导航一致的风格 -->
+  <div class="karvis-topbar">
+    <a href="https://karvis.top" class="brand">
+      <img src="../assets/icon.png" alt="Karvis">
+      Karvis <span class="docs-badge">Docs</span>
+    </a>
+    <button class="topbar-menu-btn" onclick="document.querySelector('.topbar-nav').classList.toggle('show')">☰</button>
+    <div class="topbar-nav">
+      <a href="https://karvis.top">官网</a>
+      <a href="https://github.com/sameencai/KarvisForYou" target="_blank">GitHub</a>
+      <a href="https://karvis.top/docs/#/" class="active">文档</a>
+      <a href="https://api.karvis.top/web/login" class="login-btn">登录面板</a>
+    </div>
+  </div>
+
+  <div id="app"></div>
+  <script>
+    window.$docsify = {
+      name: '',
+      repo: '',
+      loadSidebar: true,
+      subMaxLevel: 3,
+      search: {
+        placeholder: '搜索文档...',
+        noData: '没有找到结果',
+        paths: 'auto'
+      },
+      auto2top: true,
+      coverpage: false,
+      notFoundPage: true
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-nginx.min.js"></script>
+  <!-- 代码复制按钮 -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2/dist/docsify-copy-code.min.js"></script>
+</body>
+</html>

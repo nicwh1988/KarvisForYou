@@ -162,7 +162,7 @@ GitHub 开源地址：[sameencai/KarvisForYou](https://github.com/sameencai/Karv
 |:-:|:-:|:-:|
 |前端交互|企业微信 (WeCom)|原生 API，无需 Hack 协议|
 |计算核心|Flask + Docker + 腾讯云 Lighthouse|轻量部署，APScheduler 定时任务|
-|大脑|DeepSeek V3 + Qwen Flash|三层路由：闲聊用免费模型，深度分析用推理模型|
+|大脑|DeepSeek V3.2 + Qwen Flash|三层路由：闲聊用免费模型，深度分析用推理模型|
 |记忆存储|OneDrive + Obsidian|数据在自己手里，Markdown 永不过时|
 
 不同的事用不同的模型。闲聊不需要深度推理，深度分析不需要极速响应。

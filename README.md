@@ -105,12 +105,28 @@ brain.process()
 | **Agent** | `internal.read/search/list` | 文件搜索/读取（Agent Loop 信息检索） |
 | **设置** | `settings.nickname/ai_name/soul/info/skills` | 个性化设置 + Skill 开关管理 |
 | **Web** | `web.token` | 生成 Web 查看链接 |
+| **联网** | `web.search` | 联网搜索实时信息（新闻/天气/知识/技术） |
 
 > 🔒 标记的 Skill 仅管理员可用
 
 ---
 
 ## 快速开始
+
+### 我该看哪个文档？
+
+| 你的情况 | 看这个 |
+|----------|--------|
+| 想先在自己电脑试试 | [5分钟快速体验指南](docs/快速体验指南.md) |
+| 想买服务器长期用 | [腾讯云服务器选购指南](docs/腾讯云服务器选购指南.md) → [部署指南](docs/部署指南.md) |
+| 不知道企微怎么配 | [企微注册与应用创建](docs/企微注册与应用创建.md) |
+| .env 不知道怎么填 | [.env 配置说明](docs/.env配置说明.md) |
+| 回调 URL 配不通 | [回调URL配置指南](docs/回调URL配置指南.md) |
+| 部署好了不知道怎么用 | [在微信中使用指南](docs/在微信中使用指南.md) |
+| 遇到问题了 | [FAQ 常见问题](docs/FAQ.md) |
+| 想看日志/管理后台 | [管理端使用指南](docs/管理端使用指南.md) |
+| 想换模型（DeepSeek/Gemini等） | [模型配置指南](docs/模型配置指南.md) |
+| 部署完想确认都正常 | [部署成功检查清单](docs/部署成功检查清单.md) |
 
 ### 准备工作
 
@@ -173,8 +189,8 @@ python3 app.py
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `DEEPSEEK_BASE_URL` | `https://api.lkeap.cloud.tencent.com/v1` | API 地址（腾讯云 lkeap） |
-| `DEEPSEEK_MODEL` | `deepseek-v3` | 模型名称（腾讯云 lkeap 用 `deepseek-v3`；DeepSeek 官方用 `deepseek-chat`） |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com/v1` | API 地址（DeepSeek 官方） |
+| `DEEPSEEK_MODEL` | `deepseek-chat` | 模型名称（DeepSeek 官方用 `deepseek-chat`；腾讯云 lkeap 用 `deepseek-v3-0324`） |
 | `QWEN_API_KEY` | 空 | Qwen Flash（省钱） |
 | `QWEN_MODEL` | `qwen-flash` | Qwen 模型名 |
 | `QWEN_VL_MODEL` | `qwen-vl-max` | 视觉模型 |
