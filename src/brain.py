@@ -705,6 +705,8 @@ def _build_state_summary(state):
 
     # V3-F12: 每日 Top 3
     daily_top3 = state.get("daily_top3", {})
+    if isinstance(daily_top3, list):          # 兼容旧格式：裸 list → 包成 dict
+        daily_top3 = {"items": daily_top3, "date": ""}
     if daily_top3 and daily_top3.get("items"):
         beijing_tz = timezone(timedelta(hours=8))
         today_str = datetime.now(beijing_tz).strftime("%Y-%m-%d")
