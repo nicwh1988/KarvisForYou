@@ -18,7 +18,8 @@
 - **影视笔记**：影评、感想、自动填充影视信息
 
 ### ✅ 待办与习惯
-- **待办管理**：自然语言增删查，支持截止日期和定时提醒，序号批量操作
+- **待办管理**：自然语言增删改查，支持截止日期和精准定时提醒（分钟级），序号批量操作
+- **精准提醒**：设定具体时间（如"14:10提醒吃药"），独立 1 分钟检查通道，到点准时推送
 - **每日 Top 3**：早报引导设定当天 3 件重要事，晚间追踪完成情况
 - **微习惯实验**：基于行为模式自动提议微习惯，触发词检测，实验周期跟踪
 - **决策复盘**：记录重要决策，N 天后自动提醒复盘结果
@@ -43,7 +44,11 @@
 
 ### 🌐 Web 查看 & 管理
 - 14 个 Web 页面：概览、速记、待办、日记、笔记、情绪、记忆、习惯、决策、反思、设置、日志、管理后台、登录
-- 管理员后台：用户列表、LLM 用量、成本估算、用量图表、挂起/激活用户
+- 管理员后台：用户列表、LLM 用量、成本估算、用量图表、系统配置总览、挂起/激活用户
+
+### 🔍 联网搜索
+- **实时信息检索**：联网搜索新闻、天气、知识、技术问题
+- **链接内容抓取**：分享 URL 自动解析正文（支持公众号），基于内容理解回复
 
 ### ⚙️ 个性化设置
 - 对话中设置昵称、给 AI 起名、自定义 AI 性格
@@ -59,16 +64,19 @@
     ↓
 brain.process()
     ├── 加载 State + Memory（三级缓存）
-    ├── 三层模型路由 → JSON 决策
+    ├── 四层模型路由 → JSON 决策
     │   ├── Flash (Qwen)       — 陪伴关怀、轻量生成
     │   ├── Main  (DeepSeek)   — 日常路由、Skill 分发
-    │   └── Think (DeepSeek R1) — 深度分析、主题深潜
+    │   ├── Think (DeepSeek R1) — 深度分析、主题深潜
+    │   └── Claude (Sonnet)    — 管理员专属高质量推理
     ├── V4 Flash 智能回复 → 二次生成自然语言
     ├── Agent Loop（最多 5 轮）→ 文件搜索/读取后再回答
+    ├── 链接内容抓取 → URL 自动解析正文（支持公众号）
     ├── Skill 分发 → 执行操作 → 写回数据
     └── Memory 更新 + 决策日志
 
 内置调度器（APScheduler）
+    ├── 精准提醒              （每 1 分钟，独立通道）
     ├── 缓存刷新              （每 30 分钟）
     ├── 晨报                  （每天 08:00）
     ├── 待办提醒              （每天 09:00/14:00/18:00）
@@ -84,14 +92,14 @@ brain.process()
 
 ## 完整 Skill 列表
 
-共 **48 个 Skill 命令**，分布在 22 个功能模块中（[详细说明 →](SKILLS.md)）：
+共 **40 个 Skill 命令**，分布在 24 个功能模块中（[详细说明 →](SKILLS.md)）：
 
 | 分类 | Skill | 说明 |
 |---|---|---|
 | **笔记** | `note.save` | 保存到 Quick-Notes |
 | | `classify.archive` | 智能归档（工作/情感/趣事/碎碎念） |
 | **打卡** | `checkin.start/answer/skip/cancel` | 每日 4 问打卡流程 |
-| **待办** | `todo.add/done/list/remind_cancel` | 待办管理（支持循环/截止日期/序号批量操作） |
+| **待办** | `todo.add/done/list/edit/delete/remind_cancel` | 待办管理（支持循环/截止日期/精准提醒/序号批量操作） |
 | **读书** | `book.create/excerpt/thought/summary/quotes` | 读书笔记全流程（含 AI 总结/金句提炼） |
 | **影视** | `media.create/thought` | 影视笔记 |
 | **复盘** | `daily.generate` `mood.generate` `weekly.review` `monthly.review` | 日/周/月报 + 情绪日记 |
@@ -194,6 +202,9 @@ python3 app.py
 | `QWEN_API_KEY` | 空 | Qwen Flash（省钱） |
 | `QWEN_MODEL` | `qwen-flash` | Qwen 模型名 |
 | `QWEN_VL_MODEL` | `qwen-vl-max` | 视觉模型 |
+| `CLAUDE_API_KEY` | 空 | Claude API 密钥（管理员专属高质量推理） |
+| `CLAUDE_MODEL` | `claude-sonnet-4-20250514` | Claude 模型名 |
+| `SENIVERSE_KEY` | 空 | 心知天气 API Key（天气查询） |
 | `DAILY_MESSAGE_LIMIT` | `50` | 每人每天消息上限 |
 | `WEB_TOKEN_EXPIRE_HOURS` | `24` | Web 链接有效时长 |
 | `WEB_DOMAIN` | `127.0.0.1:9000` | Web 访问域名 |
@@ -228,7 +239,7 @@ KarvisForYou/
 │   ├── telegram_bot.py      # Telegram 接入
 │   ├── finance_utils.py     # 财务工具
 │   ├── requirements.txt     # Python 依赖
-│   ├── skills/              # 22 个功能模块 → 48 个 Skill
+│   ├── skills/              # 24 个功能模块 → 40 个 Skill
 │   └── web_static/          # 14 个 Web 页面
 ├── deploy/                  # Docker + SCF 部署
 ├── tests/                   # 测试
