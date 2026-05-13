@@ -137,6 +137,14 @@ def add_message_to_state(state, role, content):
         state["recent_messages"] = maybe_compress_messages(messages)
 
 
+def _extract_summary_content(text):
+    """从旧摘要中提取实际对话内容，去掉嵌套的 [对话摘要] (时间) 头部。"""
+    import re
+    # 去掉所有 "[对话摘要] (时间范围) " 前缀（可能多层嵌套）
+    cleaned = re.sub(r'\[对话摘要\]\s*\([^)]*\)\s*', '', text).strip()
+    return cleaned
+
+
 def maybe_compress_messages(messages):
     """对话压缩：保留最近 6 条原始消息，旧消息压缩为摘要（每条 100 字，总上限 800 字）。"""
     COMPRESS_KEEP_RECENT = 6  # 保留最近 6 条原始消息
@@ -147,17 +155,23 @@ def maybe_compress_messages(messages):
     to_compress = messages[:-COMPRESS_KEEP_RECENT]
     to_keep = messages[-COMPRESS_KEEP_RECENT:]
 
-    summary_parts = []
+    # 先收集旧摘要中的实质内容（扁平化，避免嵌套）
+    old_summary_content = ""
+    new_parts = []
+
     for m in to_compress:
         if m.get("role") == "system" and m.get("content", "").startswith("[对话摘要]"):
-            summary_parts.append(m["content"])
+            # 提取旧摘要的实质内容，去掉嵌套的 [对话摘要] 头部
+            extracted = _extract_summary_content(m["content"])
+            if extracted:
+                old_summary_content = extracted
             continue
         role = "用户" if m.get("role") == "user" else "Karvis"
         content = m.get("content", "")
         # 截取关键部分（保留足够语义）
         if len(content) > 200:
             content = content[:200] + "..."
-        summary_parts.append(f"{role}: {content}")
+        new_parts.append(f"{role}: {content}")
 
     time_range = ""
     if to_compress:
@@ -166,7 +180,16 @@ def maybe_compress_messages(messages):
         if first_time and last_time:
             time_range = f"({first_time} ~ {last_time})"
 
-    summary_text = f"[对话摘要] {time_range} " + " | ".join(summary_parts)
+    # 合并：旧摘要精华 + 新消息，旧摘要截断保留最近部分
+    all_parts = []
+    if old_summary_content:
+        # 旧摘要只保留最后 500 字符的精华，为新消息留空间
+        if len(old_summary_content) > 500:
+            old_summary_content = "..." + old_summary_content[-500:]
+        all_parts.append(old_summary_content)
+    all_parts.extend(new_parts)
+
+    summary_text = f"[对话摘要] {time_range} " + " | ".join(all_parts)
     if len(summary_text) > 1500:
         summary_text = summary_text[:1500] + "..."
 
