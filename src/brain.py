@@ -575,9 +575,10 @@ def _select_rules(state, payload=None, ctx=None):
     方案 A: 用户消息根据 state 和关键词动态注入分段，RULES_CORE 始终注入
     V12: 管理员额外注入 RULES_FINANCE，所有用户注入 RULES_SKILLS_MGMT
     """
-    # 方案 C: 定时任务走精简 prompt
+    # 方案 C: 定时任务走精简 prompt — 只注入当前 action 对应的规则段
     if payload and payload.get("type") == "system":
-        return [prompts.RULES_SYSTEM_TASKS]
+        action = payload.get("action", "")
+        return [prompts.get_system_task_rules(action)]
 
     # 方案 A: 用户消息 — CORE 始终注入，其余按需
     segments = [prompts.RULES_CORE]
@@ -864,7 +865,7 @@ def process(payload, send_fn=None, ctx=None):
     system_prompt = build_system_prompt(state, ctx, prompt_futs=prompt_futs, payload=payload)
     t_prompt = _time.time()
     _log(f"[Brain][耗时] prompt组装: {t_prompt - t_state:.1f}s (prompt长度={len(system_prompt)})")
-    _log(f"[Brain] system_prompt前800字:\n{system_prompt[:800]}")
+    _log(f"[Brain] system_prompt前800字:\n{system_prompt[:80000]}")
 
     user_message = _build_user_message(payload)
 
@@ -1338,7 +1339,13 @@ def _resolve_reply(user_text, decision, steps, step_results):
 
     # 快速路径 2：所有 step 都是简单 skill
     if all(s in _SIMPLE_SKILLS for s in all_skills):
-        # 优先用 skill 返回的 reply，其次用 LLM 预生成的 reply
+        # 检查是否有 skill 标记了 prefer_llm_reply（如 settings.soul）
+        # 此时优先用 LLM 预生成的更自然的回复
+        for sr in step_results:
+            r = sr.get("result", {})
+            if isinstance(r, dict) and r.get("prefer_llm_reply") and llm_reply:
+                return llm_reply
+        # 默认：优先用 skill 返回的 reply，其次用 LLM 预生成的 reply
         for sr in step_results:
             r = sr.get("result", {})
             if isinstance(r, dict) and r.get("reply"):
