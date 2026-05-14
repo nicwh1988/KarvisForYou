@@ -146,7 +146,11 @@ def _extract_summary_content(text):
 
 
 def maybe_compress_messages(messages):
-    """对话压缩：保留最近 6 条原始消息，旧消息压缩为摘要（每条 100 字，总上限 800 字）。"""
+    """对话压缩：保留最近 6 条原始消息，旧消息压缩为摘要（每条 100 字，总上限 800 字）。
+    
+    去重策略：旧摘要按 " | " 分段后，与本次新压缩消息逐段对比，
+    移除完全匹配的重复片段，避免同一段对话在摘要中出现两次。
+    """
     COMPRESS_KEEP_RECENT = 6  # 保留最近 6 条原始消息
 
     if len(messages) <= RECENT_MESSAGES_LIMIT:
@@ -159,19 +163,25 @@ def maybe_compress_messages(messages):
     old_summary_content = ""
     new_parts = []
 
+    # 收集新消息的规范化文本（用于去重）
+    new_normalized = set()
+
     for m in to_compress:
         if m.get("role") == "system" and m.get("content", "").startswith("[对话摘要]"):
-            # 提取旧摘要的实质内容，去掉嵌套的 [对话摘要] 头部
             extracted = _extract_summary_content(m["content"])
             if extracted:
                 old_summary_content = extracted
             continue
         role = "用户" if m.get("role") == "user" else "Karvis"
         content = m.get("content", "")
-        # 截取关键部分（保留足够语义）
         if len(content) > 200:
             content = content[:200] + "..."
-        new_parts.append(f"{role}: {content}")
+        part = f"{role}: {content}"
+        new_parts.append(part)
+        # 规范化：去掉角色前缀、空白、截断标记，取前80字做 key
+        normalized = content.strip().rstrip("...").strip()[:80]
+        if normalized:
+            new_normalized.add(normalized)
 
     time_range = ""
     if to_compress:
@@ -180,10 +190,29 @@ def maybe_compress_messages(messages):
         if first_time and last_time:
             time_range = f"({first_time} ~ {last_time})"
 
-    # 合并：旧摘要精华 + 新消息，旧摘要截断保留最近部分
+    # 合并：旧摘要精华（去重后）+ 新消息
     all_parts = []
-    if old_summary_content:
-        # 旧摘要只保留最后 500 字符的精华，为新消息留空间
+    if old_summary_content and new_normalized:
+        old_segments = old_summary_content.split(" | ")
+        deduped_segments = []
+        for seg in old_segments:
+            seg = seg.strip()
+            if not seg:
+                continue
+            # 提取 "角色: 内容" 中的内容部分
+            seg_content = seg.split(": ", 1)[-1] if ": " in seg else seg
+            seg_key = seg_content.strip().rstrip("...").strip()[:80]
+            if seg_key and seg_key in new_normalized:
+                continue  # 这段在新消息中已有，跳过
+            deduped_segments.append(seg)
+
+        if deduped_segments:
+            old_deduped = " | ".join(deduped_segments)
+            if len(old_deduped) > 500:
+                old_deduped = "..." + old_deduped[-500:]
+            all_parts.append(old_deduped)
+    elif old_summary_content:
+        # 没有新消息可去重，保留旧摘要
         if len(old_summary_content) > 500:
             old_summary_content = "..." + old_summary_content[-500:]
         all_parts.append(old_summary_content)

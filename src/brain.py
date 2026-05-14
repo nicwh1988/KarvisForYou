@@ -728,8 +728,17 @@ def _build_state_summary(state):
         daily_top3 = {"items": daily_top3, "date": ""}
     if daily_top3 and daily_top3.get("items"):
         beijing_tz = timezone(timedelta(hours=8))
-        today_str = datetime.now(beijing_tz).strftime("%Y-%m-%d")
+        today = datetime.now(beijing_tz)
+        today_str = today.strftime("%Y-%m-%d")
         top3_date = daily_top3.get("date", "")
+        # 计算距今天数
+        days_ago = 999
+        if top3_date:
+            try:
+                top3_dt = datetime.strptime(top3_date, "%Y-%m-%d")
+                days_ago = (today - top3_dt.replace(tzinfo=beijing_tz)).days
+            except Exception:
+                pass
         items = daily_top3["items"]
         items_str = " / ".join(
             f"{'✅' if i.get('done') else '⬜'} {i.get('text', '')}"
@@ -737,8 +746,9 @@ def _build_state_summary(state):
         )
         if top3_date == today_str:
             parts.append(f"今日 Top 3: {items_str}")
-        else:
+        elif days_ago == 1:
             parts.append(f"昨日({top3_date}) Top 3: {items_str}")
+        # 超过 1 天的过期 Top 3 不再显示，避免干扰 LLM
 
     # V3-F11: 活跃实验
     exp = state.get("active_experiment")

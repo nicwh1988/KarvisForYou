@@ -323,7 +323,7 @@ def _init_default_files(ctx: UserContext):
     # Memory
     existing = ctx.IO.read_text(ctx.memory_file)
     if not existing:
-        ctx.IO.write_text(ctx.memory_file, "# Memory\n\n")
+        ctx.IO.write_text(ctx.memory_file, "")
 
     # User Config — V12: 增加 role / storage_mode / skills 字段; V13: channel
     if not os.path.exists(ctx.user_config_file):

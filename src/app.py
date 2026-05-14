@@ -978,6 +978,45 @@ def _run_system_action_for_user(action, data, uid, ctx):
             _log(f"[/system] [{uid}] 读取上下文失败（不影响主流程）: {e}")
 
         if action == "morning_report":
+            # 清理过期 Top 3（超过 1 天），并注入提示让 LLM 通知用户
+            try:
+                _state = read_state_cached(ctx) or {}
+                daily_top3 = _state.get("daily_top3", {})
+                if isinstance(daily_top3, list):
+                    daily_top3 = {"items": daily_top3, "date": ""}
+                if daily_top3 and daily_top3.get("items"):
+                    top3_date = daily_top3.get("date", "")
+                    today_dt = datetime.now(BEIJING_TZ)
+                    today_str = today_dt.strftime("%Y-%m-%d")
+                    days_ago = 999
+                    if top3_date:
+                        try:
+                            t3_dt = datetime.strptime(top3_date, "%Y-%m-%d").replace(tzinfo=BEIJING_TZ)
+                            days_ago = (today_dt - t3_dt).days
+                        except Exception:
+                            pass
+                    if days_ago > 1:
+                        # 过期：构建完成情况摘要
+                        items = daily_top3["items"]
+                        done_count = sum(1 for i in items if i.get("done"))
+                        items_str = "、".join(
+                            f"{'✅' if i.get('done') else '⬜'}{i.get('text', '')}"
+                            for i in items
+                        )
+                        context["expired_top3"] = {
+                            "date": top3_date,
+                            "days_ago": days_ago,
+                            "done_count": done_count,
+                            "total": len(items),
+                            "items_summary": items_str,
+                        }
+                        # 清除过期 Top 3
+                        _state["daily_top3"] = {}
+                        write_state_and_update_cache(_state, ctx)
+                        _log(f"[/system] [{uid}] 清理过期 Top 3 (date={top3_date}, {days_ago}天前, 完成{done_count}/{len(items)})")
+            except Exception as e:
+                _log(f"[/system] [{uid}] 过期 Top 3 清理失败: {e}")
+
             try:
                 context["time_capsule"] = _build_time_capsule(ctx)
             except Exception as e:
