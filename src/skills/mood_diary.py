@@ -249,11 +249,15 @@ def _ai_analyze_mood(data, date_str, call_deepseek, state=None):
     if data["notes"]:
         parts.append(f"\n【当天消息记录】\n{data['notes'][:3000]}")
 
-    # 深度自问回答（高权重情绪信号）
+    # 深度自问回答（参考信号，不作为高权重，不因此降低情绪总分）
     reflect_answer = state.get("reflect_answer_today")
     if reflect_answer:
         reflect_q = state.get("reflect_question", "")
-        parts.append(f"\n【深度自问（高权重）】\n问题：{reflect_q}\n回答：{reflect_answer}")
+        parts.append(
+            f"\n【深度自问（参考，不计入情绪总分）】\n"
+            f"问题：{reflect_q}\n回答：{reflect_answer}\n"
+            f"注意：这是思想实验类的内心探索，不代表当下情绪状态，请勿因此降低今日情绪评分，可在洞察部分单独提及。"
+        )
 
     if data["decisions"]:
         parts.append("\n【AI 决策日志（辅助）】")

@@ -173,13 +173,58 @@ def _collect_week_data(dates, state, ctx):
     # 提取决策日志统计
     decision_stats = _extract_decision_stats(results["decisions"], dates)
 
+    # 提取用户对话历史（用于潜意识分析）
+    user_messages = _extract_user_messages(state, dates)
+
     return {
         "notes": notes,
         "day_summaries": day_summaries,
         "mood_scores": mood_scores,
         "decision_stats": decision_stats,
         "dates": dates,
+        "user_messages": user_messages,  # 新增：用户对话历史
     }
+
+
+def _extract_user_messages(state, dates):
+    """从 state 的 recent_messages 中提取本周用户的消息（用于潜意识分析）"""
+    recent = state.get("recent_messages", [])
+    date_set = set(dates)
+    user_texts = []
+
+    for msg in recent:
+        role = msg.get("role", "")
+        if role != "user":
+            continue
+        # 检查消息时间是否在本周范围内
+        msg_time = msg.get("time", "")
+        if not msg_time:
+            continue
+        # msg_time 格式: "2026-04-20 15:30"
+        msg_date = msg_time.split(" ")[0] if " " in msg_time else msg_time
+        if msg_date in date_set:
+            user_texts.append({
+                "time": msg_time,
+                "content": msg.get("content", "")
+            })
+
+    # 如果 recent_messages 中本周数据太少，也拉取所有用户消息（不严格限制日期）
+    if len(user_texts) < 10:
+        for msg in recent:
+            role = msg.get("role", "")
+            if role != "user":
+                continue
+            content = msg.get("content", "")
+            if content:
+                msg_time = msg.get("time", "")
+                user_texts.append({
+                    "time": msg_time,
+                    "content": content
+                })
+        # 只取最后 30 条，避免过长
+        user_texts = user_texts[-30:]
+
+    return user_texts
 
 
 def _extract_date_entries(text, date_str):
@@ -219,10 +264,10 @@ def _extract_decision_stats(text, dates):
 
 
 def _ai_analyze_week(data, period_str, dates, call_deepseek):
-    """调用 AI 分析周数据"""
+    """调用 AI 分析周数据（含潜意识分析）"""
     import prompts
 
-    parts = [f"分析以下 {period_str} 一周的记录，生成周回顾。"]
+    parts = [f"分析以下 {period_str} 一周的记录，生成周回顾。\n\n【重要】请认真完成 subconscious（潜意识分析）部分，这是用户最期待的模块。"]
 
     # 情绪评分
     if data["mood_scores"]:
@@ -243,14 +288,27 @@ def _ai_analyze_week(data, period_str, dates, call_deepseek):
         notes_text = data["notes"][:6000]
         parts.append(f"\n【本周记录】\n{notes_text}")
 
-    parts.append(prompts.WEEKLY_JSON_FORMAT)
+    # 用户对话历史（用于潜意识分析）
+    user_messages = data.get("user_messages", [])
+    if user_messages:
+        parts.append("\n【用户对话历史（用于潜意识分析）】")
+        parts.append("以下是用户本周对 Karvis 说的话（可能包含未说出口的真实想法）：")
+        for msg in user_messages:
+            time_str = msg.get("time", "")
+            content = msg.get("content", "")[:300]  # 每条消息截断到300字
+            if content:
+                parts.append(f"[{time_str}] 用户：{content}")
+        parts.append("\n请从以上对话中，分析用户的潜意识：反复出现的主题、回避的话题、未说出口的需求、情感模式等。")
+
+    parts.append("\n" + prompts.WEEKLY_JSON_FORMAT)
 
     prompt = "\n".join(parts)
 
+    # 增加 max_tokens 到 3000，因为潜意识分析需要更多输出
     response = call_deepseek([
         {"role": "system", "content": prompts.WEEKLY_SYSTEM},
         {"role": "user", "content": prompt}
-    ], max_tokens=1200, temperature=0.7)
+    ], max_tokens=3000, temperature=0.7)
 
     if not response:
         return None
@@ -374,6 +432,101 @@ def _build_weekly_review(period_str, start_date_str, analysis, data):
             insight,
             "",
         ])
+
+    # 潜意识分析（新增模块）
+    subconscious = analysis.get("subconscious", {})
+    if subconscious and isinstance(subconscious, dict):
+        lines.extend([
+            "## 🧠 潜意识分析",
+            "",
+            "> 以下分析基于你本周的语言模式，像一面镜子，帮你看见自己未曾察觉的部分。",
+            "",
+        ])
+
+        # 反复出现的主题
+        recurring = subconscious.get("recurring_themes", [])
+        if recurring:
+            lines.append("### 🔁 反复出现的主题")
+            lines.append("")
+            for item in recurring:
+                theme = item.get("theme", "")
+                evidence = item.get("evidence", "")
+                analysis_text = item.get("analysis", "")
+                lines.append(f"**{theme}**")
+                if evidence:
+                    lines.append(f"> 证据：{evidence}")
+                if analysis_text:
+                    lines.append(f"{analysis_text}")
+                lines.append("")
+
+        # 回避的话题
+        avoidance = subconscious.get("avoidance_topics", [])
+        if avoidance:
+            lines.append("### 🙈 可能回避的话题")
+            lines.append("")
+            for item in avoidance:
+                topic = item.get("topic", "")
+                reason = item.get("possible_reason", "")
+                lines.append(f"- **{topic}**")
+                if reason:
+                    lines.append(f"  → {reason}")
+            lines.append("")
+
+        # 未说出口的需求
+        needs = subconscious.get("unspoken_needs", [])
+        if needs:
+            lines.append("### 🤫 未说出口的需求")
+            lines.append("")
+            for item in needs:
+                need = item.get("need", "")
+                clues = item.get("clues", "")
+                lines.append(f"- {need}")
+                if clues:
+                    lines.append(f"  → 线索：{clues}")
+            lines.append("")
+
+        # 情感模式
+        patterns = subconscious.get("emotional_patterns", [])
+        if patterns:
+            lines.append("### 🎭 情感反应模式")
+            lines.append("")
+            for item in patterns:
+                pattern = item.get("pattern", "")
+                examples = item.get("examples", [])
+                lines.append(f"- **{pattern}**")
+                if examples:
+                    for ex in examples[:2]:  # 最多显示2个例子
+                        lines.append(f"  - {ex}")
+            lines.append("")
+
+        # 深层价值观
+        values = subconscious.get("hidden_values", [])
+        if values:
+            lines.append("### 💎 深层价值观（推测）")
+            lines.append("")
+            for v in values:
+                lines.append(f"- {v}")
+            lines.append("")
+
+        # 内心冲突
+        conflict = subconscious.get("inner_conflict", "")
+        if conflict and isinstance(conflict, str):
+            lines.extend([
+                "### ⚡ 内心冲突",
+                "",
+                conflict,
+                "",
+            ])
+
+        # 成长边缘
+        growth = subconscious.get("growth_edge", "")
+        if growth and isinstance(growth, str):
+            lines.extend([
+                "### 🌱 成长边缘",
+                "",
+                growth,
+                "",
+            ])
 
     # 下周建议
     if suggestions:

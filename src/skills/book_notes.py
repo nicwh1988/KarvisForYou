@@ -4,6 +4,7 @@ Skill: book.*
 读书笔记系统：创建书籍笔记、添加摘录/感想、AI 总结/金句。
 """
 import sys
+import re
 from datetime import datetime, timezone, timedelta
 
 
@@ -19,11 +20,81 @@ def _now_str():
 
 
 def _book_file(name, ctx):
-    return f"{ctx.book_notes_dir}/{name}.md"
+    return f"{ctx.book_notes_dir}/{_safe_book_name(name)}.md"
 
 
 def _book_list_file(ctx):
     return f"{ctx.book_notes_dir}/_书单.md"
+
+
+def _safe_book_name(name):
+    """Keep book titles usable as a single OneDrive/Obsidian file name."""
+    name = (name or "").strip()
+    name = re.sub(r'[\\/:"*?<>|]+', " ", name)
+    name = re.sub(r"\s+", " ", name).strip()
+    return name or "未命名书籍"
+
+
+def _build_book_template(name, author="未知", category="未分类", description="", body=""):
+    today = datetime.now(BEIJING_TZ).strftime("%Y-%m-%d")
+    description = description or "暂无"
+    template = f"""---
+type: book
+title: {name}
+author: {author}
+category: {category}
+start_date: {today}
+status: reading
+tags: [读书, {category}]
+---
+
+# 📚 {name}
+
+## 📋 基本信息
+
+- **作者**：{author}
+- **分类**：{category}
+- **简介**：{description}
+- **开始阅读**：{today}
+
+---
+"""
+    if body:
+        return template.rstrip() + "\n\n" + body.strip() + "\n"
+    return template + """
+## ✂️ 摘录
+
+---
+
+## 💡 我的思考
+
+---
+
+## 💎 可分享的金句
+
+---
+
+## 🤖 AI 总结
+
+---
+"""
+
+
+def _ensure_book_note(name, ctx, author="未知", category="未分类", description=""):
+    """Ensure a book file has frontmatter, title, and basic metadata."""
+    file_path = _book_file(name, ctx)
+    existing = ctx.IO.read_text(file_path)
+    if existing is None:
+        return False
+
+    if not existing.strip():
+        return ctx.IO.write_text(file_path, _build_book_template(name, author, category, description))
+
+    if "# 📚 " in existing and "type: book" in existing[:300]:
+        return True
+
+    repaired = _build_book_template(name, author, category, description, body=existing)
+    return ctx.IO.write_text(file_path, repaired)
 
 
 def create(params, state, ctx):
@@ -46,6 +117,7 @@ def create(params, state, ctx):
     description = (params.get("description") or "").strip()
     first_thought = (params.get("thought") or "").strip()
 
+    name = _safe_book_name(name)
     file_path = _book_file(name, ctx)
 
     # 检查是否已存在
@@ -55,43 +127,7 @@ def create(params, state, ctx):
 
     if not existing.strip():
         # 创建新笔记
-        template = f"""---
-type: book
-title: {name}
-author: {author}
-category: {category}
-start_date: {datetime.now(BEIJING_TZ).strftime('%Y-%m-%d')}
-status: reading
-tags: [读书, {category}]
----
-
-# 📚 {name}
-
-## 📋 基本信息
-
-- **作者**：{author}
-- **分类**：{category}
-- **简介**：{description or '暂无'}
-- **开始阅读**：{datetime.now(BEIJING_TZ).strftime('%Y-%m-%d')}
-
----
-
-## ✂️ 摘录
-
----
-
-## 💡 我的思考
-
----
-
-## 💎 可分享的金句
-
----
-
-## 🤖 AI 总结
-
----
-"""
+        template = _build_book_template(name, author, category, description)
         if first_thought:
             template = template.replace(
                 "## 💡 我的思考\n\n---",
@@ -136,6 +172,10 @@ def excerpt(params, state, ctx):
     book = (params.get("book") or state.get("active_book", "")).strip()
     if not book:
         return {"success": False, "reply": "还没有在读的书，先说一下书名吧"}
+    book = _safe_book_name(book)
+
+    if not _ensure_book_note(book, ctx):
+        return {"success": False, "reply": f"初始化《{book}》失败"}
 
     entry = f"> {content}\n*— {_now_str()}*\n"
     ok = ctx.IO.append_to_section(_book_file(book, ctx), "## ✂️ 摘录", entry)
@@ -162,6 +202,10 @@ def thought(params, state, ctx):
     book = (params.get("book") or state.get("active_book", "")).strip()
     if not book:
         return {"success": False, "reply": "还没有在读的书，先说一下书名吧"}
+    book = _safe_book_name(book)
+
+    if not _ensure_book_note(book, ctx):
+        return {"success": False, "reply": f"初始化《{book}》失败"}
 
     entry = f"{content}\n*— {_now_str()}*\n"
     ok = ctx.IO.append_to_section(_book_file(book, ctx), "## 💡 我的思考", entry)
@@ -183,6 +227,7 @@ def summary(params, state, ctx):
     book = (params.get("book") or state.get("active_book", "")).strip()
     if not book:
         return {"success": False, "reply": "需要指定书名"}
+    book = _safe_book_name(book)
 
     content = ctx.IO.read_text(_book_file(book, ctx))
     if not content or not content.strip():
@@ -240,6 +285,7 @@ def quotes(params, state, ctx):
     book = (params.get("book") or state.get("active_book", "")).strip()
     if not book:
         return {"success": False, "reply": "需要指定书名"}
+    book = _safe_book_name(book)
 
     content = ctx.IO.read_text(_book_file(book, ctx))
     if not content or not content.strip():
@@ -280,6 +326,8 @@ def _update_book_list(name, author, category, ctx):
     existing = ctx.IO.read_text(_book_list_file(ctx)) or ""
     if not existing.strip():
         existing = "# 📚 书单\n\n| 书名 | 作者 | 分类 | 状态 | 日期 |\n|------|------|------|------|------|\n"
+    if f"[[{name}]]" in existing:
+        return
 
     date = datetime.now(BEIJING_TZ).strftime("%Y-%m-%d")
     new_row = f"| [[{name}]] | {author} | {category} | 📖 在读 | {date} |"
