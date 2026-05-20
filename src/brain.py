@@ -639,13 +639,15 @@ def build_system_prompt(state, ctx, prompt_futs=None, payload=None):
     now_bj = datetime.now(beijing_tz)
     current_time = _build_time_string(now_bj)
 
+    is_system = payload and payload.get("type") == "system"
+    action = payload.get("action", "") if payload else ""
+
     # memory 从该用户的文件加载
     if prompt_futs and "mem" in prompt_futs:
         mem = prompt_futs["mem"].result()
     else:
         mem = load_memory(ctx)
 
-    recent = format_recent_messages(state)
     state_summary = _build_state_summary(state)
 
     # SOUL 支持用户自定义覆写
@@ -660,8 +662,34 @@ def build_system_prompt(state, ctx, prompt_futs=None, payload=None):
     if ai_name:
         soul += f"\n- 用户给你起了昵称「{ai_name}」，在合适的时候可以用这个名字自称"
 
+    # ---- system action 精简模式 ----
+    if is_system and action in ("morning_report", "evening_checkin", "daily_report",
+                                 "mood_generate", "reflect_push"):
+        # 精简记忆：保留近期关注、偏好、书影相关段落
+        mem_brief = _extract_memory_brief(mem)
+        # 精简对话：取最近 24 小时内的消息，总量上限 800 字
+        recent_brief = _extract_recent_24h(state)
+
+        # 条件注入 RULES
+        rules_segments = _select_rules(state, payload, ctx=ctx)
+        rules_text = "\n\n".join(rules_segments)
+
+        # 精简输出格式
+        output_brief = '## 输出格式（严格 JSON）\n{"thinking":"一句话","skill":"none","params":{},"reply":"回复内容","state_updates":{},"memory_updates":[],"continue":false}'
+
+        parts = [soul,
+                 f"\n## 记忆摘要\n{mem_brief}",
+                 f"\n## 最近对话\n{recent_brief}",
+                 f"\n## 当前状态\n{state_summary}",
+                 f"\n## 当前时间\n{current_time}",
+                 f"\n{rules_text}",
+                 f"\n{output_brief}"]
+        return "\n".join(parts)
+
+    # ---- 正常模式（用户对话） ----
+    recent = format_recent_messages(state)
+
     # 方案 C+A: 条件注入 RULES（V12: 传入 ctx 用于 admin 判断）
-    is_system = payload and payload.get("type") == "system"
     rules_segments = _select_rules(state, payload, ctx=ctx)
     rules_text = "\n\n".join(rules_segments)
 
@@ -684,6 +712,68 @@ def build_system_prompt(state, ctx, prompt_futs=None, payload=None):
     parts.append(f"\n{prompts.OUTPUT_FORMAT}")
 
     return "\n".join(parts)
+
+
+def _extract_memory_brief(full_memory):
+    """从完整记忆中提取早报/系统动作需要的关键段落"""
+    if not full_memory:
+        return "（无记忆）"
+    
+    # 提取关键段落：近期关注、偏好、用户画像、书影相关
+    import re
+    keep_sections = ("近期关注", "偏好", "关键偏好", "用户画像", "生活背景",
+                     "阅读", "书", "影视", "在看", "在读")
+    sections = re.split(r'\n(?=## )', full_memory)
+    kept = []
+    for section in sections:
+        header = section.strip().split('\n')[0].replace('## ', '').strip()
+        if any(k in header for k in keep_sections):
+            # 每段最多保留 400 字
+            kept.append(section.strip()[:400])
+    
+    if kept:
+        return "\n\n".join(kept)
+    # 如果没匹配到段落，返回前 600 字
+    return full_memory[:600]
+
+
+def _extract_recent_24h(state):
+    """提取最近 24 小时内的对话消息，总量上限 800 字。
+    如果 24h 内不足 3 条，则兜底取最近 5 条。"""
+    beijing_tz = timezone(timedelta(hours=8))
+    now = datetime.now(beijing_tz)
+    cutoff = now - timedelta(hours=24)
+    cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M")
+
+    messages = state.get("recent_messages", [])
+    
+    # 按时间过滤 24 小时内的消息
+    recent_24h = []
+    for m in messages:
+        if m.get("role") == "system":
+            continue
+        msg_time = m.get("time", "")
+        if msg_time >= cutoff_str:
+            recent_24h.append(m)
+    
+    # 兜底：24h 内不足 3 条，取最近 5 条非 system 消息
+    if len(recent_24h) < 3:
+        non_system = [m for m in messages if m.get("role") != "system"]
+        recent_24h = non_system[-5:]
+    
+    # 构建文本，总量上限 800 字
+    lines = []
+    total_len = 0
+    for m in recent_24h:
+        role = "用户" if m.get("role") == "user" else "Karvis"
+        content = m.get("content", "")[:150]
+        line = f"[{m.get('time', '')}] {role}: {content}"
+        if total_len + len(line) > 800:
+            break
+        lines.append(line)
+        total_len += len(line)
+    
+    return "\n".join(lines) if lines else "（暂无最近对话）"
 
 
 def _build_state_summary(state):
