@@ -29,8 +29,8 @@ api_bp = Blueprint("api", __name__)
 
 
 def _log(msg):
-    ts = datetime.now(_BEIJING_TZ).strftime("%H:%M:%S")
-    print(f"{ts} {msg}", file=sys.stderr, flush=True)
+    from logger import log
+    log(msg)
 
 
 # ============================================================

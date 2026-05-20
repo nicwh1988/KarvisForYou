@@ -12,7 +12,8 @@ from config import RECENT_MESSAGES_LIMIT, PROMPT_CACHE_TTL, STATE_CACHE_TTL
 import json as _json
 
 def _log(msg):
-    print(msg, file=sys.stderr, flush=True)
+    from logger import log
+    log(msg)
 
 
 # ============ Prompt 缓存（按 file_path，多用户天然隔离）============

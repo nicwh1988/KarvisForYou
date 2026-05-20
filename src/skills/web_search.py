@@ -27,8 +27,8 @@ BEIJING_TZ = timezone(timedelta(hours=8))
 
 
 def _log(msg):
-    ts = datetime.now(BEIJING_TZ).strftime("%H:%M:%S")
-    print(f"{ts} {msg}", file=sys.stderr, flush=True)
+    from logger import log
+    log(msg)
 
 
 def execute(params, state, ctx):

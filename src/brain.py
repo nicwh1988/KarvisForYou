@@ -40,25 +40,8 @@ _executor = ThreadPoolExecutor(max_workers=6)
 _BEIJING_TZ = timezone(timedelta(hours=8))
 
 def _log(msg):
-    ts = datetime.now(_BEIJING_TZ).strftime("%Y-%m-%d %H:%M:%S")
-    # 获取调用者文件名和行号
-    try:
-        frame = inspect.currentframe().f_back
-        filename = frame.f_code.co_filename
-        lineno = frame.f_lineno
-        short_file = filename.split('/')[-1].split('\\')[-1]
-        loc = f"{short_file}:{lineno}"
-    except Exception:
-        loc = "?"
-    try:
-        from app import _get_request_id
-        rid = _get_request_id()
-        if rid:
-            print(f"{ts} [{loc}] [{rid}] {msg}", file=sys.stderr, flush=True)
-            return
-    except ImportError:
-        pass
-    print(f"{ts} [{loc}] {msg}", file=sys.stderr, flush=True)
+    from logger import log
+    log(msg)
 
 
 # ============ 管理员告警推送 ============

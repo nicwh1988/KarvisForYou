@@ -86,30 +86,25 @@ app.register_blueprint(api_bp, url_prefix="/api")
 
 
 # ============ Request ID 线程本地存储 ============
-_request_local = threading.local()
+from logger import set_request_id as _logger_set_rid, get_request_id as _logger_get_rid
 
 
 def _get_request_id():
     """获取当前线程的 Request ID"""
-    return getattr(_request_local, "request_id", None)
+    return _logger_get_rid()
 
 
 def _set_request_id(rid=None):
     """设置当前线程的 Request ID，不传则自动生成短 ID"""
-    _request_local.request_id = rid or uuid.uuid4().hex[:8]
-    return _request_local.request_id
+    return _logger_set_rid(rid)
 
 
 _BEIJING_TZ = timezone(timedelta(hours=8))
 
 
 def _log(msg):
-    ts = datetime.now(_BEIJING_TZ).strftime("%H:%M:%S")
-    rid = _get_request_id()
-    if rid:
-        print(f"{ts} [{rid}] {msg}", file=sys.stderr, flush=True)
-    else:
-        print(f"{ts} {msg}", file=sys.stderr, flush=True)
+    from logger import log
+    log(msg)
 
 
 # ============ 企微 access_token 缓存 ============

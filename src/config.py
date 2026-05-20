@@ -76,7 +76,7 @@ SCHEDULER_MORNING_REPORT_CAP = "08:15"  # 晨报 ideal 时间上限，防止因�
 SCHEDULER_MORNING_REPORT_LATEST = "08:30"  # 晨报最晚推送兜底，超过此时间强制触发
 
 # ============ 日志查看 ============
-LOG_FILE_KARVISFORALL = os.environ.get("LOG_FILE_KARVISFORALL", "/root/KarvisForAll/logs/app.log")
+LOG_FILE_KARVISFORALL = os.environ.get("LOG_FILE_KARVISFORALL", os.path.join(os.path.dirname(__file__), "logs", "karvis.log"))
 
 # ============ 服务端口 ============
 SERVER_PORT = int(os.environ.get("SERVER_PORT", "9000"))

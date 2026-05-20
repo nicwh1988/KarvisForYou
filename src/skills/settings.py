@@ -6,7 +6,8 @@ KarvisForAll 对话式设置
 import sys
 
 def _log(msg):
-    print(msg, file=sys.stderr, flush=True)
+    from logger import log
+    log(msg)
 
 
 def set_nickname(params, state, ctx):
