@@ -72,8 +72,8 @@ SCHEDULER_WEEKEND_SHIFT = 60      # 周末平均晚起分钟数
 SCHEDULER_RHYTHM_WINDOW = 7       # 节奏学习滑动窗口（天）
 SCHEDULER_PUSH_MAX_DAILY = 7      # 每日所有主动推送总上限
 SCHEDULER_MIN_PUSH_GAP = 30       # 两次推送最小间隔（分钟）
-SCHEDULER_MORNING_REPORT_CAP = "08:30"  # 晨报 ideal 时间上限，防止因历史样本偏晚导致推送过晚
-SCHEDULER_MORNING_REPORT_LATEST = "09:00"  # 晨报最晚推送兜底，超过此时间强制触发
+SCHEDULER_MORNING_REPORT_CAP = "08:15"  # 晨报 ideal 时间上限，防止因历史样本偏晚导致推送过晚
+SCHEDULER_MORNING_REPORT_LATEST = "08:30"  # 晨报最晚推送兜底，超过此时间强制触发
 
 # ============ 日志查看 ============
 LOG_FILE_KARVISFORALL = os.environ.get("LOG_FILE_KARVISFORALL", "/root/KarvisForAll/logs/app.log")

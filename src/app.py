@@ -1845,7 +1845,9 @@ def _daily_init(uid, ctx):
     intents = _generate_daily_intents(state)
 
     # 过期意图标记 skipped（容器重启等场景）
+    # 但 morning_report 如果过期不超过 2 小时，立刻兜底执行而非跳过
     now_min = now.hour * 60 + now.minute
+    force_send_intents = []
     for intent in intents:
         latest = intent.get("latest", "23:59")
         try:
@@ -1853,9 +1855,16 @@ def _daily_init(uid, ctx):
         except (ValueError, IndexError):
             continue
         if now_min > latest_min:
-            intent["status"] = "skipped"
-            intent["_skip_reason"] = f"初始化时已过期（now={now.strftime('%H:%M')} > latest={latest}）"
-            _log(f"[V8][{uid}] 意图 {intent['type']} 已过期，标记 skipped")
+            if intent["type"] == "morning_report" and (now_min - latest_min) <= 120:
+                # 早报过期不超过 2 小时，标记为待立刻执行
+                intent["status"] = "pending"
+                intent["_trigger_reason"] = f"兜底补发（初始化时已过期 {now_min - latest_min} 分钟）"
+                force_send_intents.append(intent)
+                _log(f"[V8][{uid}] 意图 morning_report 已过期但不超过2h，将兜底补发")
+            else:
+                intent["status"] = "skipped"
+                intent["_skip_reason"] = f"初始化时已过期（now={now.strftime('%H:%M')} > latest={latest}）"
+                _log(f"[V8][{uid}] 意图 {intent['type']} 已过期，标记 skipped")
 
     sched["intents"] = intents
     sched["_init_date"] = today_str
