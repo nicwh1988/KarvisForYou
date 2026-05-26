@@ -337,7 +337,6 @@ def read_state_cached(ctx):
     with _state_lock:
         cached = _state_cache.get(uid)
         if cached and cached["data"] is not None and cached["expire_time"] > now:
-            _log(f"[State] 命中内存缓存 ({uid})")
             return copy.deepcopy(cached["data"])
 
     # 2. /tmp 磁盘缓存
@@ -350,7 +349,6 @@ def read_state_cached(ctx):
                     data = _json.load(f)
                 with _state_lock:
                     _state_cache[uid] = {"data": data, "expire_time": now + STATE_CACHE_TTL}
-                _log(f"[State] 命中 /tmp 缓存 ({uid})")
                 return copy.deepcopy(data)
     except Exception:
         pass
