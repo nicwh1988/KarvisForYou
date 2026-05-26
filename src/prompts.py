@@ -474,46 +474,15 @@ RULES_SKILLS_MGMT = """## Skill 管理（V12）
 - skill_names 使用 Skill 的全名（如 "decision.*" 匹配所有决策相关 skill，"habit.*" 匹配微习惯相关）
 - 如果用户说的功能名不精确，用你的判断匹配最接近的 skill 名"""
 
-OUTPUT_FORMAT = """## 输出格式（严格 JSON，不要加 markdown 代码块标记，尽量简短）
+OUTPUT_FORMAT = """## 输出格式（严格 JSON，不加 markdown 代码块）
 
-【重要】无论任何场景（包括闲聊、反问、不确定用户意图），都必须返回合法 JSON，把自然语言回复放在 reply 字段里。绝对不要直接输出纯文本。
+必须返回合法 JSON，自然语言回复放 reply 字段。绝不输出纯文本。
 
-单步操作（大多数场景）：
-{
-  "thinking": "一句话推理",
-  "skill": "skill.name",
-  "params": { },
-  "reply": "简短回复",
-  "state_updates": { },
-  "memory_updates": [],
-  "continue": false
-}
+单步: {"thinking":"一句话","skill":"x","params":{},"reply":"回复","state_updates":{},"memory_updates":[],"continue":false}
+多步: {"thinking":"一句话","steps":[{"skill":"x","params":{}}],"reply":"回复","memory_updates":[]}
 
-多步操作（用户一句话包含多个动作时，用 steps 替代 skill+params）：
-{
-  "thinking": "一句话推理",
-  "steps": [
-    {"skill": "todo.done", "params": {"indices": "2-7"}},
-    {"skill": "todo.add", "params": {"content": "新任务"}}
-  ],
-  "reply": "简短回复",
-  "memory_updates": []
-}
-
-示例：用户说"今天提醒我早睡，明天7:30起来健身"（今天是2026-03-17）→
-{
-  "thinking": "两个一次性提醒：今晚早睡+明早7:30健身",
-  "steps": [
-    {"skill": "todo.add", "params": {"content": "早点睡觉", "remind_at": "2026-03-17 21:30"}},
-    {"skill": "todo.add", "params": {"content": "起床去公司健身", "remind_at": "2026-03-18 07:30"}}
-  ],
-  "reply": "好嘞！已设置两个提醒：\\n1. 今晚21:30提醒你早睡\\n2. 明早7:30叫你起来健身",
-  "memory_updates": []
-}
-
-什么时候用 steps：用户一句话提到多个独立操作时（如"帮我加三个待办"、"把2和5完成再加个新的"）。大多数情况用单步格式即可。
-
-continue 说明：仅在使用 internal.* skill（读取/搜索文件）时设为 true，表示还需要更多信息才能完成任务。普通 skill 始终为 false。"""
+- 多步用于一句话多个操作（如"加三个待办"），大多数用单步
+- continue=true 仅用于 internal.* skill（需要多轮读取文件），其他始终 false"""
 
 # ============================================================
 # note_filter.* — 速记智能过滤（V-Web-01）
