@@ -851,6 +851,34 @@ def _build_state_summary(state):
         else:
             parts.append(f"待复盘决策: {len(unreviewed)} 个")
 
+    # V14: 情绪趋势摘要（最近 7 天）
+    mood_scores = state.get("mood_scores", [])
+    if mood_scores:
+        beijing_tz = timezone(timedelta(hours=8))
+        today = datetime.now(beijing_tz).date()
+        cutoff = (today - timedelta(days=7)).strftime("%Y-%m-%d")
+        recent_moods = [s for s in mood_scores if s.get("date", "") >= cutoff]
+        if recent_moods:
+            scores_val = [s.get("score", 5) for s in recent_moods]
+            avg = sum(scores_val) / len(scores_val)
+            latest = recent_moods[-1]
+            # 趋势判断
+            if len(scores_val) >= 3:
+                first_half = scores_val[:len(scores_val)//2]
+                second_half = scores_val[len(scores_val)//2:]
+                avg_first = sum(first_half) / len(first_half)
+                avg_second = sum(second_half) / len(second_half)
+                if avg_second - avg_first > 1:
+                    trend = "↑ 回升中"
+                elif avg_first - avg_second > 1:
+                    trend = "↓ 下滑中"
+                else:
+                    trend = "→ 平稳"
+            else:
+                trend = ""
+            latest_label = f", 最近: {latest.get('score')}/10({latest.get('label', '')})" if latest.get("label") else f", 最近: {latest.get('score')}/10"
+            parts.append(f"情绪趋势(7天): 均分{avg:.1f}/10 {trend}{latest_label}")
+
     return "\n".join(parts) if parts else "无特殊状态"
 
 

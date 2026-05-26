@@ -1138,6 +1138,16 @@ def _run_system_action_for_user(action, data, uid, ctx):
         if reply:
             channel_router.send_message(uid, reply)
         _log(f"[system_action] weekly_review 完成, user={uid}, has_reply={bool(reply)}, 耗时={time.time()-t0:.1f}s")
+
+        # V14: 周报后自动触发记忆维护
+        try:
+            from skills.memory_maintain import execute as mem_maintain
+            state_fresh = read_state_cached(ctx) or {}
+            maintain_result = mem_maintain({}, state_fresh, ctx)
+            _log(f"[system_action] memory.maintain 完成, user={uid}, result={maintain_result.get('maintained', {})}")
+        except Exception as e:
+            _log(f"[system_action] memory.maintain 失败(不影响周报): {e}")
+
         return {"ok": True, "has_reply": bool(reply)}
 
     if action == "nudge_check":
