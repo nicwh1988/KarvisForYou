@@ -858,7 +858,8 @@ def system_endpoint():
         data = request.get_json(force=True)
         action = data.get("action", "")
         target_user = data.get("user_id", "")
-        _log(f"[/system] action={action}, user={target_user or 'all'}")
+        if action != "precise_remind":
+            _log(f"[/system] action={action}, user={target_user or 'all'}")
 
         if action == "refresh_cache":
             from memory import invalidate_all_caches
@@ -885,6 +886,21 @@ def system_endpoint():
                     _log(f"[/system] V8 {action} 用户 {uid} 失败: {e}")
                     results.append({"user_id": uid, "ok": False, "error": str(e)})
             return json.dumps({"ok": True, "action": action, "results": results}, ensure_ascii=False)
+
+        # precise_remind 每分钟执行，无推送时静默（避免日志刷屏）
+        if action == "precise_remind":
+            user_ids = [target_user] if target_user else get_all_active_users()
+            total_sent = 0
+            for uid in user_ids:
+                try:
+                    ctx, _ = get_or_create_user(uid)
+                    result = _run_system_action_for_user(action, data, uid, ctx)
+                    total_sent += result.get("sent", 0)
+                except Exception as e:
+                    _log(f"[/system] precise_remind 用户 {uid} 失败: {e}")
+            if total_sent > 0:
+                _log(f"[/system] precise_remind 完成, 共推送 {total_sent} 条")
+            return json.dumps({"ok": True, "action": action, "sent": total_sent})
 
         # 如果指定了 user_id，只处理该用户；否则遍历所有活跃用户
         if target_user:
@@ -923,7 +939,8 @@ def system_endpoint():
 def _run_system_action_for_user(action, data, uid, ctx):
     """为单个用户执行系统动作，返回结果 dict"""
     from memory import read_state_cached, write_state_and_update_cache
-    _log(f"[system_action] 开始执行: action={action}, user={uid}")
+    if action != "precise_remind":
+        _log(f"[system_action] 开始执行: action={action}, user={uid}")
     t0 = time.time()
 
     if action == "todo_remind":
@@ -1747,12 +1764,14 @@ def _generate_daily_intents(state):
         shift = rhythm.get("weekend_shift", SCHEDULER_WEEKEND_SHIFT)
         wake_time = _add_minutes(wake_time, shift)
 
+    # 早报 earliest 不能超过 LATEST，防止 avg_wake_time 过晚导致早报永远等到起床后才发
+    morning_earliest = _min_time(wake_time, SCHEDULER_MORNING_REPORT_LATEST)
     intents = [
         {
             "type": "morning_report",
-            "earliest": wake_time,
-            "latest": _min_time(_add_minutes(wake_time, 150), SCHEDULER_MORNING_REPORT_LATEST),
-            "ideal": _min_time(_add_minutes(wake_time, 30), SCHEDULER_MORNING_REPORT_CAP),
+            "earliest": morning_earliest,
+            "latest": SCHEDULER_MORNING_REPORT_LATEST,
+            "ideal": _min_time(_add_minutes(morning_earliest, 15), SCHEDULER_MORNING_REPORT_CAP),
             "priority": "normal",
             "status": "pending"
         },
@@ -1989,6 +2008,10 @@ def _rule_evaluate(intent, state, now):
         return "wait"
 
     if now_min < earliest_min:
+        # 安全检查：如果 earliest > latest（配置异常），且已过 latest，应兜底触发
+        if earliest_min > latest_min and now_min >= latest_min:
+            intent["_trigger_reason"] = "兜底触发（earliest>latest 异常，已过 latest）"
+            return "send"
         return "wait"
 
     if now_min >= latest_min:
