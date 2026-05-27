@@ -356,7 +356,6 @@ def read_state_cached(ctx):
     # 3. 通过 IO 回源读取
     data = ctx.IO.read_json(ctx.state_file) or {}
     _update_state_cache(uid, data)
-    _log(f"[State] 从文件读取 ({uid})")
     return copy.deepcopy(data)
 
 
