@@ -119,6 +119,7 @@ SKILL_PROMPT_LINES = {
     "internal.read": '**internal.read** `{paths, max_chars?}` — [Agent] 读取文件',
     "internal.search": '**internal.search** `{keywords, scope?, max_results?}` — [Agent] 搜索笔记',
     "internal.list": '**internal.list** `{directory}` — [Agent] 列出文件',
+    "internal.grep": '**internal.grep** `{pattern, path?, glob?, context_lines?, max_results?, case_sensitive?}` — [Agent] 递归搜索全部历史数据（支持正则），返回文件+行号+上下文',
     "settings.nickname": '**settings.nickname** `{nickname}` — 设置用户昵称（"叫我XX"触发）',
     "settings.ai_name": '**settings.ai_name** `{ai_name}` — 给AI起昵称（"叫你XX"触发）',
     "settings.soul": '**settings.soul** `{style, mode?}` — 设置说话风格（mode: set/append/reset）',

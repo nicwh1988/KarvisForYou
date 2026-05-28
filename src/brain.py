@@ -682,6 +682,12 @@ def build_system_prompt(state, ctx, prompt_futs=None, payload=None):
     else:
         from skill_loader import get_skills_for_prompt
         allowed_names = get_skills_for_prompt(ctx)
+        # Local 模式：屏蔽 internal.search（grep 更强）
+        # OneDrive 模式：屏蔽 internal.grep（依赖本地文件系统）
+        if ctx.storage_mode != "onedrive":
+            allowed_names = [n for n in allowed_names if n != "internal.search"]
+        else:
+            allowed_names = [n for n in allowed_names if n != "internal.grep"]
         skills_block = prompts.build_skills_prompt(allowed_names)
 
     parts = [soul,
@@ -972,7 +978,7 @@ def process(payload, send_fn=None, ctx=None):
                                elapsed=_time.time() - t_start, ctx=ctx)
         return {"reply": reply}
 
-    # 5. 构建 prompt 并调用 LLM（prompt_futs 在步骤 1 已提交，此处直接取结果）
+    # 5. 构建 prompt 并调用 LLM
     system_prompt = build_system_prompt(state, ctx, prompt_futs=prompt_futs, payload=payload)
     t_prompt = _time.time()
     _log(f"[Brain][耗时] prompt组装: {t_prompt - t_state:.1f}s (prompt长度={len(system_prompt)})")
@@ -988,6 +994,20 @@ def process(payload, send_fn=None, ctx=None):
     _log(f"[Brain] 模型路由: tier={model_tier}, is_system={is_system}, action={action}"
          f"{', model=Claude' if use_claude else ', model=DeepSeek'}")
 
+    # ===== V15: Gateway Mode (Function Calling) =====
+    # 环境变量 USE_GATEWAY=1 启用新模式，默认走旧模式保持兼容
+    _use_gateway = os.environ.get("USE_GATEWAY", "1") == "1"
+    if _use_gateway and not is_system:
+        result = _process_gateway_mode(
+            system_prompt, user_message, state, ctx, payload,
+            user_text, model_tier, send_fn, t_start, t_prompt
+        )
+        if result is not None:
+            return result
+        # Gateway 返回 None 表示降级到旧模式
+        _log("[Brain] Gateway mode 降级到旧模式")
+
+    # ===== 旧模式（JSON 输出） =====
     llm_response = call_llm([
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_message}
@@ -1021,14 +1041,17 @@ def process(payload, send_fn=None, ctx=None):
     #    Stage 2: Flash 后判 — 回复发出后异步调 Flash 判断是否值得写入
     primary_skill = _get_primary_skill(decision)
 
-    # Reflect 防护 — reflect_pending 时，非 reflect skill 强制重路由（优先级低于 checkin）
+    # Reflect 防护 — reflect_pending 时，仅当 LLM 选了 ignore 才重路由为 reflect.answer
+    # 如果 LLM 已明确选了其他有意图的 skill（如 classify.archive/todo.add），
+    # 说明用户不是在回答深度自问，尊重 LLM 的判断
     _REFLECT_SKILLS = ("reflect.answer", "reflect.skip", "reflect.history", "reflect.push")
     _CHECKIN_SKILLS = ("checkin.answer", "checkin.skip", "checkin.cancel", "checkin.start")
     if (state.get("reflect_pending")
             and not state.get("checkin_pending")
             and payload.get("type") != "system"
             and primary_skill not in _REFLECT_SKILLS
-            and primary_skill not in _CHECKIN_SKILLS):
+            and primary_skill not in _CHECKIN_SKILLS
+            and primary_skill == "ignore"):
         _log(f"[Brain] 深度自问防护: {primary_skill} → reflect.answer")
         decision["skill"] = "reflect.answer"
         decision["params"] = {"answer": user_text}
@@ -1133,6 +1156,169 @@ def process(payload, send_fn=None, ctx=None):
                      user_text, None)
 
     return {"reply": reply, "already_sent": bool(send_fn and reply)}
+
+
+# ============ V15: Gateway Mode (Function Calling) ============
+
+def _process_gateway_mode(system_prompt, user_message, state, ctx, payload,
+                          user_text, model_tier, send_fn, t_start, t_prompt):
+    """
+    使用原生 Function Calling + Gateway Loop 处理用户消息。
+    返回 result dict 或 None（降级到旧模式）。
+    """
+    try:
+        from gateway import gateway_loop, GatewayResult
+        from tool_schema import build_tools
+        from skill_loader import get_skills_for_prompt
+
+        # 1. 构建 tools 列表（按用户权限过滤）
+        allowed_names = get_skills_for_prompt(ctx)
+        # Local 模式：屏蔽 internal.search（grep 更强）
+        # OneDrive 模式：屏蔽 internal.grep（依赖本地文件系统）
+        if ctx.storage_mode != "onedrive":
+            allowed_names = [n for n in allowed_names if n != "internal.search"]
+        else:
+            allowed_names = [n for n in allowed_names if n != "internal.grep"]
+        tools = build_tools(allowed_names)
+        _log(f"[Brain][Gateway] 构建 tools: {len(tools)} 个")
+
+        # 2. 构建 System Prompt（Gateway 模式不需要 OUTPUT_FORMAT 段）
+        # 移除旧的 JSON 输出格式要求，改为自然对话 + 工具调用
+        gateway_system = _build_gateway_system_prompt(system_prompt)
+
+        # 3. 构建消息
+        messages = [
+            {"role": "system", "content": gateway_system},
+            {"role": "user", "content": user_message},
+        ]
+
+        # 4. 运行 Gateway Loop
+        registry = _get_skill_registry()
+        gw_result = gateway_loop(
+            messages=messages,
+            tools=tools,
+            registry=registry,
+            ctx=ctx,
+            state=state,
+            model_tier=model_tier,
+            max_tokens=800,
+            temperature=0.3,
+        )
+        t_gw = _time.time()
+        _log(f"[Brain][Gateway] Loop 完成: {t_gw - t_prompt:.1f}s, "
+             f"skills={[s[0] for s in gw_result.executed_skills]}, "
+             f"reply_len={len(gw_result.reply)}")
+
+        if not gw_result.reply and not gw_result.has_tool_calls:
+            # Gateway 无有效结果，降级
+            return None
+
+        # 5. 应用 state_updates
+        if gw_result.state_updates:
+            state.update(gw_result.state_updates)
+
+        # 6. Quick-Notes 过滤
+        primary_skill = gw_result.primary_skill
+        _pending_note_filter = False
+        if payload.get("type") != "system" and primary_skill not in (
+            "checkin.answer", "checkin.skip", "checkin.cancel", "checkin.start",
+            "reflect.answer", "reflect.skip"
+        ):
+            if primary_skill in _SKIP_NOTE_SKILLS:
+                pass
+            elif primary_skill == "note.save":
+                _save_to_quick_notes(payload, state, ctx)
+            else:
+                _pending_note_filter = True
+
+        # 7. 兜底回复
+        reply = gw_result.reply
+        if not reply and payload.get("type") != "system":
+            if gw_result.memory_updates:
+                reply = "记住啦~"
+            elif primary_skill == "note.save":
+                reply = "已记录 ✅"
+            else:
+                reply = "好的~"
+
+        if reply:
+            add_message_to_state(state, "karvis", reply)
+
+        # 8. 先发回复
+        if send_fn and reply:
+            try:
+                send_fn(reply)
+                _log(f"[Brain][Gateway] 回复已发送: {reply[:200]}")
+            except Exception as e:
+                _log(f"[Brain][Gateway] 发送失败: {e}")
+
+        # 9. 异步 Flash 过滤
+        if _pending_note_filter:
+            _executor.submit(_flash_filter_and_save, payload, state, ctx, primary_skill)
+
+        # 10. 更新用户节奏
+        try:
+            _update_user_rhythm(state)
+        except Exception as e:
+            _log(f"[Brain][Gateway] 节奏更新失败: {e}")
+
+        # 11. 保存 state + memory
+        decision = gw_result.to_decision_dict()
+        t_save_start = _time.time()
+        _save_state_and_memory(state, decision, payload=payload, reply=reply,
+                               elapsed=t_save_start - t_start, ctx=ctx)
+        t_end = _time.time()
+        _log(f"[Brain][Gateway][耗时] 保存: {t_end - t_save_start:.1f}s | 总计: {t_end - t_start:.1f}s")
+
+        # 12. 异步告警
+        _executor.submit(_check_and_alert, t_end - t_start,
+                         payload.get("user_id", "unknown"), primary_skill, user_text, None)
+
+        return {"reply": reply, "already_sent": bool(send_fn and reply)}
+
+    except Exception as e:
+        _log(f"[Brain][Gateway] 异常，降级到旧模式: {e}")
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        return None
+
+
+def _build_gateway_system_prompt(original_system_prompt):
+    """将旧的 system prompt 转化为 Gateway 模式（移除 OUTPUT_FORMAT 段，添加工具使用说明）"""
+    import prompts
+
+    # 移除旧的 OUTPUT_FORMAT 段（JSON 输出格式要求）
+    prompt = original_system_prompt
+    if prompts.OUTPUT_FORMAT in prompt:
+        prompt = prompt.replace(prompts.OUTPUT_FORMAT, "")
+
+    # 移除旧的 SKILLS 段（因为 tools 已通过 JSON Schema 传递）
+    # 查找并移除 "# 可用 Skill" 段落
+    skill_header = "# 可用 Skill（参数均为 JSON）"
+    if skill_header in prompt:
+        idx = prompt.find(skill_header)
+        # 找到下一个 # 标题或结尾
+        next_section = prompt.find("\n# ", idx + len(skill_header))
+        if next_section >= 0:
+            prompt = prompt[:idx] + prompt[next_section:]
+        else:
+            prompt = prompt[:idx]
+
+    # 添加 Gateway 模式的简短说明
+    gateway_instructions = """
+## 工具使用说明
+- 你可以调用提供的工具（functions）来执行操作。工具列表已通过 API 传递。
+- 如果用户的消息需要执行操作（添加待办、归档笔记、打卡等），调用对应工具。
+- 如果只是闲聊或不需要任何操作，直接回复文本即可。
+- 你可以在一次回复中调用多个工具（并行执行）。
+- 调用工具后，你会收到执行结果，然后生成最终回复。
+- 回复要简洁自然，像朋友聊天。
+
+## 记忆更新
+当用户透露重要信息（自我介绍/偏好/人际关系/重大事件）时，在回复中自然提及即可，系统会自动处理记忆更新。
+"""
+    prompt = prompt.rstrip() + "\n" + gateway_instructions
+    return prompt
 
 
 def _save_state_and_memory(state, decision, payload=None, reply=None, elapsed=None, ctx=None):
